@@ -28,29 +28,33 @@ namespace FilesSync.Core
 
         private void OnFileEvent(object sender, FileSystemEventArgs e)
         {
-            switch (e.ChangeType)
+            // exclude directories
+            if (File.Exists(e.FullPath))
             {
-                case WatcherChangeTypes.Created:
-                    this.sender.Create(e.FullPath);
-                    this.monitor.CommitCreate(e.FullPath);
-                    break;
-                case WatcherChangeTypes.Deleted:
-                    this.sender.Delete(e.FullPath);
-                    this.monitor.CommitDelete(e.FullPath);
-                    break;
-                case WatcherChangeTypes.Changed:
-                    this.sender.Create(e.FullPath);
-                    this.monitor.CommitCreate(e.FullPath);
-                    break;
-                case WatcherChangeTypes.Renamed:
-                    RenamedEventArgs eventArgs = (RenamedEventArgs)e;
-                    this.sender.Move(eventArgs.OldFullPath, eventArgs.FullPath);
-                    this.monitor.CommitMove(eventArgs.OldFullPath, eventArgs.FullPath);
-                    break;
-                case WatcherChangeTypes.All:
-                    break;
-                default:
-                    break;
+                switch (e.ChangeType)
+                {
+                    case WatcherChangeTypes.Created:
+                        this.sender.Create(e.FullPath);
+                        this.monitor.CommitCreate(e.FullPath);
+                        break;
+                    case WatcherChangeTypes.Deleted:
+                        this.sender.Delete(e.FullPath);
+                        this.monitor.CommitDelete(e.FullPath);
+                        break;
+                    case WatcherChangeTypes.Changed:
+                        this.sender.Create(e.FullPath);
+                        this.monitor.CommitCreate(e.FullPath);
+                        break;
+                    case WatcherChangeTypes.Renamed:
+                        RenamedEventArgs eventArgs = (RenamedEventArgs)e;
+                        this.sender.Move(eventArgs.OldFullPath, eventArgs.FullPath);
+                        this.monitor.CommitMove(eventArgs.OldFullPath, eventArgs.FullPath);
+                        break;
+                    case WatcherChangeTypes.All:
+                        break;
+                    default:
+                        break;
+                }
             }
         }
 
