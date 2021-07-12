@@ -51,6 +51,8 @@ namespace FilesSync.Core.Helpers
             this.FileSystemWatcher.Renamed += OnWatcherEvent;
             this.FileSystemWatcher.Error += OnWatcherError;
 
+            this.FileSystemWatcher.EnableRaisingEvents = true;
+
             this.FilesChangesScanner = new()
             {
                 FolderPath = settings.DirectoryPathToMonitor,
