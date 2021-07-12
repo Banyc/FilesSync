@@ -35,8 +35,11 @@ namespace FilesSync.Core.Helpers
                     Path = settings.StatePersistencePath,
                     Parent = null,
                 };
-                File.Create(settings.StatePersistencePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(settings.StatePersistencePath));
             }
+
+            // create monitoring folder
+            Directory.CreateDirectory(settings.DirectoryPathToMonitor);
 
             this.FileSystemWatcher = new();
             this.FileSystemWatcher.IncludeSubdirectories = true;
@@ -149,7 +152,11 @@ namespace FilesSync.Core.Helpers
 
         private void SaveState()
         {
-            File.WriteAllText(this.settings.StatePersistencePath, JsonSerializer.Serialize(this.State));
+            JsonSerializerOptions options = new()
+            {
+                WriteIndented = true,
+            };
+            File.WriteAllText(this.settings.StatePersistencePath, JsonSerializer.Serialize(this.State, options));
         }
 
         private (string, DirectoryModel) GetFileNameAndDirectoryModel(string localFilePath)

@@ -25,11 +25,21 @@ namespace FilesSync.Core.Helpers
             lock (this)
             {
                 string remoteFilePath = GetRemoteFilePath(localFilePath);
-                using ScpClient client = GetScpClient();
+                using SftpClient client = GetSftpClient();
 
                 client.Connect();
-                FileStream localFile = File.OpenRead(localFilePath);
-                client.Upload(localFile, remoteFilePath);
+                using FileStream localFile = File.OpenRead(localFilePath);
+                string remoteDirectoryPath = Path.GetDirectoryName(remoteFilePath);
+                remoteDirectoryPath = remoteDirectoryPath.Replace('\\', '/');
+                if (!client.Exists(remoteDirectoryPath))
+                {
+                    client.CreateDirectory(remoteDirectoryPath);
+                }
+                if (client.Exists(remoteFilePath))
+                {
+                    client.DeleteFile(remoteFilePath);
+                }
+                client.UploadFile(localFile, remoteFilePath);
                 client.Disconnect();
             }
         }
@@ -71,7 +81,7 @@ namespace FilesSync.Core.Helpers
         {
             string relativePath = Path.GetRelativePath(this.settings.LocalFolder, localFilePath);
             string remoteFilePath = Path.Combine(this.settings.RemoteFolder, relativePath);
-            return remoteFilePath;
+            return remoteFilePath.Replace('\\', '/');
         }
 
         private SshClient GetSshClient()
