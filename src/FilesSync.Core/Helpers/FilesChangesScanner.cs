@@ -23,6 +23,8 @@ namespace FilesSync.Core.Helpers
             void TravelDirectories(DirectoryInfo currentDirectory, DirectoryModel oldDirectory)
             {
                 var files = currentDirectory.GetFiles();
+                HashSet<string> currentFilesNames = new();
+                // find modified files and new files
                 foreach (var file in files)
                 {
                     if (oldDirectory.Files.ContainsKey(file.Name))
@@ -42,7 +44,17 @@ namespace FilesSync.Core.Helpers
                         // found new file
                         modifiedFilesPaths.Add(file.FullName);
                     }
+                    currentFilesNames.Add(file.Name);
                 }
+                // find deleted files
+                HashSet<string> stateFilesNames = new(oldDirectory.Files.Keys);
+                var deletedFilesNames = stateFilesNames.Except(currentFilesNames);
+                foreach (var deletedFileName in deletedFilesNames)
+                {
+                    modifiedFilesPaths.Add(oldDirectory.Files[deletedFileName].Path);
+                }
+
+                // travel the sub-folders
                 var directories = currentDirectory.GetDirectories();
                 foreach (var directory in directories)
                 {

@@ -53,8 +53,10 @@ namespace FilesSync.Core.Helpers
                 using SftpClient client = GetSftpClient();
 
                 client.Connect();
-                // client.RunCommand($"rm -f \"{remoteFilePath}\"");
-                client.DeleteFile(remoteFilePath);
+                if (client.Exists(remoteFilePath))
+                {
+                    client.DeleteFile(remoteFilePath);
+                }
                 // TODO: remove empty folders
                 client.Disconnect();
             }
