@@ -24,6 +24,7 @@ namespace FilesSync.Core.Helpers
         {
             lock (this)
             {
+                System.Diagnostics.Debug.WriteLine("[SSH] Begin Creating");
                 string remoteFilePath = GetRemoteFilePath(localFilePath);
                 using SftpClient client = GetSftpClient();
 
@@ -41,6 +42,7 @@ namespace FilesSync.Core.Helpers
                 }
                 client.UploadFile(localFile, remoteFilePath);
                 client.Disconnect();
+                System.Diagnostics.Debug.WriteLine("[SSH] End Creating");
             }
         }
 
@@ -48,6 +50,7 @@ namespace FilesSync.Core.Helpers
         {
             lock (this)
             {
+                System.Diagnostics.Debug.WriteLine("[SSH] Begin Deleting");
                 string remoteFilePath = GetRemoteFilePath(localFilePath);
                 // using SshClient client = GetSshClient();
                 using SftpClient client = GetSftpClient();
@@ -55,10 +58,23 @@ namespace FilesSync.Core.Helpers
                 client.Connect();
                 if (client.Exists(remoteFilePath))
                 {
-                    client.DeleteFile(remoteFilePath);
+                    var attributes = client.GetAttributes(remoteFilePath);
+                    if (attributes.IsRegularFile)
+                    {
+                        client.DeleteFile(remoteFilePath);
+                    }
+                    else
+                    {
+                        // delete folder via recursive deletion
+                        using SshClient sshClient = GetSshClient();
+                        sshClient.Connect();
+                        sshClient.RunCommand($"rm -r \"{remoteFilePath}\"");
+                        sshClient.Disconnect();
+                    }
                 }
                 // TODO: remove empty folders
                 client.Disconnect();
+                System.Diagnostics.Debug.WriteLine("[SSH] End Deleting");
             }
         }
 
@@ -66,6 +82,7 @@ namespace FilesSync.Core.Helpers
         {
             lock (this)
             {
+                System.Diagnostics.Debug.WriteLine("[SSH] Begin Moving");
                 string remoteOldFilePath = GetRemoteFilePath(localOldFilePath);
                 string remoteNewFilePath = GetRemoteFilePath(localNewFilePath);
                 // using SshClient client = GetSshClient();
@@ -79,6 +96,7 @@ namespace FilesSync.Core.Helpers
                 }
                 // TODO: remove empty folders
                 client.Disconnect();
+                System.Diagnostics.Debug.WriteLine("[SSH] End Moving");
             }
         }
 

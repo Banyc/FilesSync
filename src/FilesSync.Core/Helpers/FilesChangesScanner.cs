@@ -14,7 +14,7 @@ namespace FilesSync.Core.Helpers
             return GetChangedUnitsPaths(this.FolderPath, oldFolderState);
         }
 
-        // ignore empty folders
+        // ignore new recursive empty folders
         private static List<string> GetChangedUnitsPaths(string folderPath, DirectoryModel oldFolderState)
         {
             DirectoryInfo currentDirectory = new(folderPath);
