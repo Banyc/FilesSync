@@ -26,6 +26,7 @@ namespace FilesSync.Core.Helpers
             if (File.Exists(settings.StatePersistencePath))
             {
                 this.State = JsonSerializer.Deserialize<DirectoryModel>(File.ReadAllText(settings.StatePersistencePath));
+                SetParentsToDirectoryModel(null, this.State);
             }
             else
             {
@@ -180,6 +181,15 @@ namespace FilesSync.Core.Helpers
                 currentDirectory = currentDirectory.Directories[pathPartitions[i]];
             }
             return (pathPartitions[^1], currentDirectory);
+        }
+
+        private void SetParentsToDirectoryModel(DirectoryModel parent, DirectoryModel currentDirectory)
+        {
+            currentDirectory.Parent = parent;
+            foreach (var (_, subdirectory) in currentDirectory.Directories)
+            {
+                SetParentsToDirectoryModel(currentDirectory, subdirectory);
+            }
         }
     }
 }
