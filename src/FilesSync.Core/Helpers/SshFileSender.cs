@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.IO;
 using FilesSync.Core.Models;
 using Renci.SshNet;
+using Renci.SshNet.Sftp;
 
 namespace FilesSync.Core.Helpers
 {
@@ -29,18 +31,27 @@ namespace FilesSync.Core.Helpers
                 using SftpClient client = GetSftpClient();
 
                 client.Connect();
-                using FileStream localFile = File.OpenRead(localFilePath);
-                string remoteDirectoryPath = Path.GetDirectoryName(remoteFilePath);
-                remoteDirectoryPath = remoteDirectoryPath.Replace('\\', '/');
-                if (!client.Exists(remoteDirectoryPath))
+                if (File.Exists(localFilePath))
                 {
-                    client.CreateDirectory(remoteDirectoryPath);
+                    // file has not been deleted or renamed
+                    using FileStream localFile = File.OpenRead(localFilePath);
+                    string remoteDirectoryPath = Path.GetDirectoryName(remoteFilePath);
+                    remoteDirectoryPath = remoteDirectoryPath.Replace('\\', '/');
+                    if (!client.Exists(remoteDirectoryPath))
+                    {
+                        // client.CreateDirectory(remoteDirectoryPath);
+                        // recursive folder creation
+                        SshClient sshClient = GetSshClient();
+                        sshClient.Connect();
+                        sshClient.RunCommand($"mkdir -p \"{remoteDirectoryPath}\"");
+                        sshClient.Disconnect();
+                    }
+                    if (client.Exists(remoteFilePath))
+                    {
+                        client.DeleteFile(remoteFilePath);
+                    }
+                    client.UploadFile(localFile, remoteFilePath);
                 }
-                if (client.Exists(remoteFilePath))
-                {
-                    client.DeleteFile(remoteFilePath);
-                }
-                client.UploadFile(localFile, remoteFilePath);
                 client.Disconnect();
                 System.Diagnostics.Debug.WriteLine("[SSH] End Creating");
             }
@@ -71,8 +82,9 @@ namespace FilesSync.Core.Helpers
                         sshClient.RunCommand($"rm -r \"{remoteFilePath}\"");
                         sshClient.Disconnect();
                     }
+                    // remove empty folders
+                    RemoveEmptyParentFolders(Path.GetDirectoryName(remoteFilePath).Replace("\\", "/"));
                 }
-                // TODO: remove empty folders
                 client.Disconnect();
                 System.Diagnostics.Debug.WriteLine("[SSH] End Deleting");
             }
@@ -93,8 +105,9 @@ namespace FilesSync.Core.Helpers
                 if (client.Exists(remoteOldFilePath))
                 {
                     client.RenameFile(remoteOldFilePath, remoteNewFilePath);
+                    // remove empty folders
+                    RemoveEmptyParentFolders(Path.GetDirectoryName(remoteOldFilePath).Replace("\\", "/"));
                 }
-                // TODO: remove empty folders
                 client.Disconnect();
                 System.Diagnostics.Debug.WriteLine("[SSH] End Moving");
             }
@@ -135,6 +148,29 @@ namespace FilesSync.Core.Helpers
                     username: this.settings.Username,
                     password: this.settings.Password);
             return client;
+        }
+
+        private void RemoveEmptyParentFolders(string childPath)
+        {
+            using SftpClient client = GetSftpClient();
+            client.Connect();
+
+            while (true)
+            {
+                var list = client.ListDirectory(childPath);
+                List<SftpFile> fileList = new(list);
+                if (fileList.Count > 2)
+                {
+                    break;
+                }
+                client.DeleteDirectory(childPath);
+
+                string parent = Path.GetDirectoryName(childPath).Replace("\\", "/");
+
+                childPath = parent;
+            }
+
+            client.Disconnect();
         }
     }
 }
