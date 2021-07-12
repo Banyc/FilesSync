@@ -8,36 +8,6 @@ namespace FilesSync.Core.Models
         [JsonIgnore]
         public DirectoryModel Parent { get; set; }
 
-        // public string RelativePath
-        // {
-        //     get
-        //     {
-        //         if (this.Parent == null)
-        //         {
-        //             return "";
-        //         }
-        //         else
-        //         {
-        //             if (this.Parent.RelativePath == "")
-        //             {
-        //                 return $"{this.Name}";
-        //             }
-        //             else
-        //             {
-        //                 return $"{this.Parent.RelativePath}/{this.Name}";
-        //             }
-        //         }
-        //         // if (this.Parent == null)
-        //         // {
-        //         //     return this.Name;
-        //         // }
-        //         // else
-        //         // {
-        //         //     return $"{this.Parent.RelativePath}/{this.Name}";
-        //         // }
-        //     }
-        // }
-
         public string Path
         {
             get

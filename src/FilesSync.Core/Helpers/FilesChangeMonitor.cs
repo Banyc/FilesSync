@@ -60,13 +60,13 @@ namespace FilesSync.Core.Helpers
             };
         }
 
-        public List<string> GetChangedFilesPaths()
+        public List<string> GetChangedUnitsPaths()
         {
             lock (this)
             {
                 this.isScanning = true;
             }
-            var result = this.FilesChangesScanner.GetChangedFilesPaths(this.State);
+            var result = this.FilesChangesScanner.GetChangedUnitsPaths(this.State);
             lock (this)
             {
                 this.isScanning = false;

@@ -78,7 +78,7 @@ namespace FilesSync.Core
         {
             do
             {
-                var paths = this.monitor.GetChangedFilesPaths();
+                var paths = this.monitor.GetChangedUnitsPaths();
                 foreach (var path in paths)
                 {
                     if (File.Exists(path))

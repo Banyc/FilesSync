@@ -9,16 +9,17 @@ namespace FilesSync.Core.Helpers
     {
         public string FolderPath { get; set; }
 
-        public List<string> GetChangedFilesPaths(DirectoryModel oldFolderState)
+        public List<string> GetChangedUnitsPaths(DirectoryModel oldFolderState)
         {
-            return GetChangedFilesPaths(this.FolderPath, oldFolderState);
+            return GetChangedUnitsPaths(this.FolderPath, oldFolderState);
         }
 
-        public static List<string> GetChangedFilesPaths(string folderPath, DirectoryModel oldFolderState)
+        // ignore empty folders
+        private static List<string> GetChangedUnitsPaths(string folderPath, DirectoryModel oldFolderState)
         {
             DirectoryInfo currentDirectory = new(folderPath);
 
-            List<string> modifiedFilesPaths = new();
+            List<string> modifiedUnitsPaths = new();
 
             void TravelDirectories(DirectoryInfo currentDirectory, DirectoryModel oldDirectory)
             {
@@ -36,13 +37,13 @@ namespace FilesSync.Core.Helpers
                         else
                         {
                             // found modified file
-                            modifiedFilesPaths.Add(file.FullName);
+                            modifiedUnitsPaths.Add(file.FullName);
                         }
                     }
                     else
                     {
                         // found new file
-                        modifiedFilesPaths.Add(file.FullName);
+                        modifiedUnitsPaths.Add(file.FullName);
                     }
                     currentFilesNames.Add(file.Name);
                 }
@@ -51,7 +52,14 @@ namespace FilesSync.Core.Helpers
                 var deletedFilesNames = stateFilesNames.Except(currentFilesNames);
                 foreach (var deletedFileName in deletedFilesNames)
                 {
-                    modifiedFilesPaths.Add(oldDirectory.Files[deletedFileName].Path);
+                    modifiedUnitsPaths.Add(oldDirectory.Files[deletedFileName].Path);
+                }
+                // find deleted folders
+                HashSet<string> stateDirectoriesNames = new(oldDirectory.Directories.Keys);
+                var deletedDirectoriesNames = stateDirectoriesNames.Except(currentDirectory.GetDirectories().Select(xxxx => xxxx.Name));
+                foreach (var deletedDirectoryName in deletedDirectoriesNames)
+                {
+                    modifiedUnitsPaths.Add(oldDirectory.Directories[deletedDirectoryName].Path);
                 }
 
                 // travel the subfolders
@@ -72,7 +80,7 @@ namespace FilesSync.Core.Helpers
 
             TravelDirectories(currentDirectory, oldFolderState);
 
-            return modifiedFilesPaths;
+            return modifiedUnitsPaths;
         }
     }
 }
