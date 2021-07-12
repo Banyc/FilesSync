@@ -33,6 +33,7 @@ namespace FilesSync.Core.Helpers
                 {
                     Name = Path.GetDirectoryName(settings.StatePersistencePath),
                     Path = settings.StatePersistencePath,
+                    Parent = null,
                 };
                 File.Create(settings.StatePersistencePath);
             }
@@ -71,19 +72,58 @@ namespace FilesSync.Core.Helpers
         {
             lock (this)
             {
-                FileInfo fileInfo = new(localFilePath);
-                (string targetName, DirectoryModel directoryModel) = GetFileNameAndDirectoryModel(localFilePath);
-                directoryModel.Files[targetName] = new()
-                {
-                    LastWriteTime = fileInfo.LastWriteTime,
-                    Path = fileInfo.FullName,
-                    Name = fileInfo.Name,
-                };
+                CreateInState(localFilePath);
                 SaveState();
             }
         }
 
-        // TODO: commit "delete", "move"
+        public void CommitDelete(string localFilePath)
+        {
+            lock (this)
+            {
+                DeleteFromState(localFilePath);
+                SaveState();
+            }
+        }
+
+        public void CommitMove(string oldLocalFilePath, string newLocalFilePath)
+        {
+            lock (this)
+            {
+                DeleteFromState(oldLocalFilePath);
+                CreateInState(newLocalFilePath);
+                SaveState();
+            }
+        }
+
+        private void CreateInState(string localFilePath)
+        {
+            FileInfo fileInfo = new(localFilePath);
+            (string targetName, DirectoryModel directoryModel) = GetFileNameAndDirectoryModel(localFilePath);
+            directoryModel.Files[targetName] = new()
+            {
+                LastWriteTime = fileInfo.LastWriteTime,
+                Path = fileInfo.FullName,
+                Name = fileInfo.Name,
+            };
+        }
+
+        private void DeleteFromState(string localFilePath)
+        {
+            FileInfo fileInfo = new(localFilePath);
+            (string targetName, DirectoryModel directoryModel) = GetFileNameAndDirectoryModel(localFilePath);
+            if (directoryModel.Files.ContainsKey(targetName))
+            {
+                directoryModel.Files.Remove(targetName);
+            }
+            // remove empty folders
+            while (directoryModel.Files.Count == 0)
+            {
+                string directoryName = directoryModel.Name;
+                directoryModel = directoryModel.Parent;
+                directoryModel.Directories.Remove(directoryName);
+            }
+        }
 
         private void OnWatcherEvent(object sender, FileSystemEventArgs e)
         {
@@ -125,6 +165,7 @@ namespace FilesSync.Core.Helpers
                     {
                         Name = pathPartitions[i],
                         Path = Path.Combine(currentDirectory.Path, pathPartitions[i]),
+                        Parent = currentDirectory,
                     };
                 }
                 currentDirectory = currentDirectory.Directories[pathPartitions[i]];

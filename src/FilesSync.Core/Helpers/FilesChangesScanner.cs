@@ -52,6 +52,7 @@ namespace FilesSync.Core.Helpers
                         {
                             Name = directory.Name,
                             Path = directory.FullName,
+                            Parent = oldDirectory,
                         };
                     }
                     TravelDirectories(directory, oldDirectory.Directories[directory.Name]);
