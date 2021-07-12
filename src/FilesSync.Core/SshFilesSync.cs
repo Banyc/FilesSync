@@ -34,8 +34,10 @@ namespace FilesSync.Core
                 switch (e.ChangeType)
                 {
                     case WatcherChangeTypes.Created:
-                        this.sender.Create(e.FullPath);
-                        this.monitor.CommitCreate(e.FullPath);
+                        // this.sender.Create(e.FullPath);
+                        // this.monitor.CommitCreate(e.FullPath);
+                        // a file moving between different folders only raise "Created" event. Need a full scan.
+                        ScanAndUpdate();
                         break;
                     case WatcherChangeTypes.Deleted:
                         this.sender.Delete(e.FullPath);
