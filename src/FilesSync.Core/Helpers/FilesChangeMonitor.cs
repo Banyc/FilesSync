@@ -26,14 +26,14 @@ namespace FilesSync.Core.Helpers
             if (File.Exists(settings.StatePersistencePath))
             {
                 this.State = JsonSerializer.Deserialize<DirectoryModel>(File.ReadAllText(settings.StatePersistencePath));
-                SetParentsToDirectoryModel(null, this.State);
+                this.State.Name = settings.DirectoryPathToMonitor;
+                this.State.UpdateParentsOfOffspring();
             }
             else
             {
                 this.State = new()
                 {
-                    Name = Path.GetDirectoryName(settings.StatePersistencePath),
-                    Path = settings.StatePersistencePath,
+                    Name = settings.DirectoryPathToMonitor,
                     Parent = null,
                 };
                 Directory.CreateDirectory(Path.GetDirectoryName(settings.StatePersistencePath));
@@ -78,7 +78,7 @@ namespace FilesSync.Core.Helpers
         {
             lock (this)
             {
-                CreateInState(localFilePath);
+                CreateFileInState(localFilePath);
                 SaveState();
             }
         }
@@ -92,43 +92,68 @@ namespace FilesSync.Core.Helpers
             }
         }
 
-        public void CommitMove(string oldLocalFilePath, string newLocalFilePath)
+        public void CommitMoveFile(string oldLocalFilePath, string newLocalFilePath)
         {
             lock (this)
             {
                 DeleteFromState(oldLocalFilePath);
-                CreateInState(newLocalFilePath);
+                CreateFileInState(newLocalFilePath);
                 SaveState();
             }
         }
 
-        private void CreateInState(string localFilePath)
+        public void CommitMoveDirectory(string oldDirectoryPath, string newDirectoryPath)
+        {
+            lock (this)
+            {
+                var directoryModel = (DirectoryModel)DeleteFromState(oldDirectoryPath);
+                CreateFolderInState(directoryModel, newDirectoryPath);
+                SaveState();
+            }
+        }
+
+        private void CreateFileInState(string localFilePath)
         {
             FileInfo fileInfo = new(localFilePath);
-            (string targetName, DirectoryModel directoryModel) = GetFileNameAndDirectoryModel(localFilePath);
+            (string targetName, DirectoryModel directoryModel) = GetTargetNameAndParentDirectoryModel(localFilePath);
             directoryModel.Files[targetName] = new()
             {
                 LastWriteTime = fileInfo.LastWriteTime,
-                Path = fileInfo.FullName,
                 Name = fileInfo.Name,
+                Parent = directoryModel,
             };
         }
 
-        private void DeleteFromState(string localFilePath)
+        private void CreateFolderInState(DirectoryModel directoryModel, string localDirectoryPath)
         {
-            FileInfo fileInfo = new(localFilePath);
-            (string targetName, DirectoryModel directoryModel) = GetFileNameAndDirectoryModel(localFilePath);
+            (string targetName, DirectoryModel parentDirectoryModel) = GetTargetNameAndParentDirectoryModel(localDirectoryPath);
+            directoryModel.Parent = parentDirectoryModel;
+            directoryModel.Name = targetName;
+            parentDirectoryModel.Directories[directoryModel.Name] = directoryModel;
+        }
+
+        private FileSystemUnitModel DeleteFromState(string localFilePath)
+        {
+            FileSystemUnitModel deletedTarget = null;
+            (string targetName, DirectoryModel directoryModel) = GetTargetNameAndParentDirectoryModel(localFilePath);
             if (directoryModel.Files.ContainsKey(targetName))
             {
+                deletedTarget = directoryModel.Files[targetName];
                 directoryModel.Files.Remove(targetName);
             }
+            else if (directoryModel.Directories.ContainsKey(targetName))
+            {
+                deletedTarget = directoryModel.Directories[targetName];
+                directoryModel.Directories.Remove(targetName);
+            }
             // remove empty folders
-            while (directoryModel.Files.Count == 0)
+            while (directoryModel.Files.Count == 0 && directoryModel.Directories.Count == 0)
             {
                 string directoryName = directoryModel.Name;
                 directoryModel = directoryModel.Parent;
                 directoryModel.Directories.Remove(directoryName);
             }
+            return deletedTarget;
         }
 
         private void OnWatcherEvent(object sender, FileSystemEventArgs e)
@@ -162,7 +187,7 @@ namespace FilesSync.Core.Helpers
             File.WriteAllText(this.settings.StatePersistencePath, JsonSerializer.Serialize(this.State, options));
         }
 
-        private (string, DirectoryModel) GetFileNameAndDirectoryModel(string localFilePath)
+        private (string, DirectoryModel) GetTargetNameAndParentDirectoryModel(string localFilePath)
         {
             string relativePath = Path.GetRelativePath(this.settings.DirectoryPathToMonitor, localFilePath);
             string[] pathPartitions = relativePath.Split(Path.DirectorySeparatorChar);
@@ -174,22 +199,12 @@ namespace FilesSync.Core.Helpers
                     currentDirectory.Directories[pathPartitions[i]] = new()
                     {
                         Name = pathPartitions[i],
-                        Path = Path.Combine(currentDirectory.Path, pathPartitions[i]),
                         Parent = currentDirectory,
                     };
                 }
                 currentDirectory = currentDirectory.Directories[pathPartitions[i]];
             }
             return (pathPartitions[^1], currentDirectory);
-        }
-
-        private void SetParentsToDirectoryModel(DirectoryModel parent, DirectoryModel currentDirectory)
-        {
-            currentDirectory.Parent = parent;
-            foreach (var (_, subdirectory) in currentDirectory.Directories)
-            {
-                SetParentsToDirectoryModel(currentDirectory, subdirectory);
-            }
         }
     }
 }

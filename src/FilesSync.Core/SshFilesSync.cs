@@ -28,35 +28,44 @@ namespace FilesSync.Core
 
         private void OnFileEvent(object sender, FileSystemEventArgs e)
         {
-            // exclude directories
-            if (File.Exists(e.FullPath))
+            switch (e.ChangeType)
             {
-                switch (e.ChangeType)
-                {
-                    case WatcherChangeTypes.Created:
-                        // this.sender.Create(e.FullPath);
-                        // this.monitor.CommitCreate(e.FullPath);
-                        // a file moving between different folders only raise "Created" event. Need a full scan.
-                        ScanAndUpdate();
-                        break;
-                    case WatcherChangeTypes.Deleted:
-                        this.sender.Delete(e.FullPath);
-                        this.monitor.CommitDelete(e.FullPath);
-                        break;
-                    case WatcherChangeTypes.Changed:
+                case WatcherChangeTypes.Created:
+                    // exclude directories
+                    if (File.Exists(e.FullPath))
+                    {
                         this.sender.Create(e.FullPath);
                         this.monitor.CommitCreate(e.FullPath);
-                        break;
-                    case WatcherChangeTypes.Renamed:
-                        RenamedEventArgs eventArgs = (RenamedEventArgs)e;
-                        this.sender.Move(eventArgs.OldFullPath, eventArgs.FullPath);
-                        this.monitor.CommitMove(eventArgs.OldFullPath, eventArgs.FullPath);
-                        break;
-                    case WatcherChangeTypes.All:
-                        break;
-                    default:
-                        break;
-                }
+                    }
+                    break;
+                case WatcherChangeTypes.Deleted:
+                    this.sender.Delete(e.FullPath);
+                    this.monitor.CommitDelete(e.FullPath);
+                    break;
+                case WatcherChangeTypes.Changed:
+                    // exclude directories
+                    if (File.Exists(e.FullPath))
+                    {
+                        this.sender.Create(e.FullPath);
+                        this.monitor.CommitCreate(e.FullPath);
+                    }
+                    break;
+                case WatcherChangeTypes.Renamed:
+                    RenamedEventArgs eventArgs = (RenamedEventArgs)e;
+                    this.sender.Move(eventArgs.OldFullPath, eventArgs.FullPath);
+                    if (File.Exists(e.FullPath))
+                    {
+                        this.monitor.CommitMoveFile(eventArgs.OldFullPath, eventArgs.FullPath);
+                    }
+                    else
+                    {
+                        this.monitor.CommitMoveDirectory(eventArgs.OldFullPath, eventArgs.FullPath);
+                    }
+                    break;
+                case WatcherChangeTypes.All:
+                    break;
+                default:
+                    break;
             }
         }
 

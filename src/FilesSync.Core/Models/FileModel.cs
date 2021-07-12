@@ -1,11 +1,10 @@
 using System;
 namespace FilesSync.Core.Models
 {
-    public class FileModel
+    public class FileModel : FileSystemUnitModel
     {
-        public string Path { get; set; }
-        public string Name { get; set; }
         public byte[] MD5 { get; set; }
         public DateTime LastWriteTime { get; set; }
+        public int Size { get; set; }
     }
 }

@@ -54,7 +54,7 @@ namespace FilesSync.Core.Helpers
                     modifiedFilesPaths.Add(oldDirectory.Files[deletedFileName].Path);
                 }
 
-                // travel the sub-folders
+                // travel the subfolders
                 var directories = currentDirectory.GetDirectories();
                 foreach (var directory in directories)
                 {
@@ -63,7 +63,6 @@ namespace FilesSync.Core.Helpers
                         oldDirectory.Directories[directory.Name] = new()
                         {
                             Name = directory.Name,
-                            Path = directory.FullName,
                             Parent = oldDirectory,
                         };
                     }
