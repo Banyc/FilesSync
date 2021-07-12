@@ -72,8 +72,11 @@ namespace FilesSync.Core.Helpers
                 using SftpClient client = GetSftpClient();
 
                 client.Connect();
-                // client.RunCommand($"mv \"{remoteOldFilePath}\" \"{remoteNewFilePath}\"");
-                client.RenameFile(remoteOldFilePath, remoteNewFilePath);
+                // empty folders have not been created in remote yet.
+                if (client.Exists(remoteOldFilePath))
+                {
+                    client.RenameFile(remoteOldFilePath, remoteNewFilePath);
+                }
                 // TODO: remove empty folders
                 client.Disconnect();
             }
